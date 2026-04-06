@@ -1,3 +1,8 @@
+---
+name: grunt-dev
+description: Skill для розробки додатків на Ґрунт (metadata-driven framework). Активується при роботі з DocType, controllers, hooks, grunt.db, REST API, Vue 3 frontend, CLI командами та тестуванням.
+---
+
 # Ґрунт — Skill для розробника додатків
 
 Цей skill допомагає будувати повноцінні додатки на базі **Ґрунт** — metadata-driven framework (Python/FastAPI/Vue 3).
