@@ -187,3 +187,26 @@ print(f"Закрито {count} замовлень")
 - ❌ **Не роби N+1 запитів** — завантажуй пов'язані дані одним `get_list` з потрібними `fields`
 - ❌ **Не використовуй `set_value` для полів з валідацією** — використовуй `save_doc`
 - ❌ **Не викликай `commit()` вручну** — Ґрунт керує транзакціями
+
+---
+
+## Агрегація та Групування (aggregate)
+
+Використовуйте `grunt.db.aggregate` для побудови аналітичних запитів замість raw SQLAlchemy:
+
+```python
+data = await grunt.db.aggregate(
+   "Order",
+   filters={"status": "Відкрите"},
+   group_by="date(created_at)",
+   aggregations={"amount": "sum", "cnt": "count"},
+   order_by="date(created_at)",
+   order="asc",
+   limit=10,
+)
+# Поверне список словників:
+# [{"date(created_at)": "2024-03-24", "amount": 15000, "cnt": 5}, ...]
+```
+
+- `group_by`: Підтримує масиви або рядки. Підтримує синтаксис `date(поле)` для групування по днях.
+- `aggregations`: Словник форматів `{ключ: функція}`. Для `count(*)` можна просто писати `{"cnt": "count"}`. Для інших `{назва: "sum(поле)"}` або `{назва: "avg(поле)"}`. Підтримує `sum`, `avg`, `min`, `max`, `count`.
