@@ -4,6 +4,17 @@ Agent skill для розробки повноцінних додатків на
 
 ## Встановлення
 
+### Claude Code Marketplace (рекомендовано)
+
+```bash
+/plugin marketplace add GruntUA/grunt-agent-skills
+/plugin install grunt-dev@grunt-agent-skills
+```
+
+Після встановлення skill доступний як `/grunt-dev:grunt-dev`.
+
+### Skills CLI (legacy)
+
 ```bash
 npx skills add GruntUA/grunt-agent-skills --skill grunt-dev
 ```
@@ -37,7 +48,13 @@ npx skills add GruntUA/grunt-agent-skills --skill grunt-dev
 
 ```
 grunt-agent-skills/
-├── SKILL.md                ← головний файл (оркестрація, правила)
+├── .claude-plugin/
+│   ├── plugin.json         ← маніфест плагіна для Claude marketplace
+│   └── marketplace.json    ← каталог маркетплейсу
+├── skills/
+│   └── grunt-dev/
+│       └── SKILL.md        ← skill для Claude Code plugin system
+├── SKILL.md                ← skill для legacy skills CLI
 └── references/
     ├── new-app.md          ← крок за кроком: новий додаток
     ├── existing-app.md     ← розширення існуючого додатку

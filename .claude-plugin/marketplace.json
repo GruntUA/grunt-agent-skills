@@ -1,0 +1,27 @@
+{
+  "name": "grunt-agent-skills",
+  "owner": {
+    "name": "GruntUA"
+  },
+  "metadata": {
+    "description": "Agent skills для розробки повноцінних додатків на базі Ґрунт framework"
+  },
+  "plugins": [
+    {
+      "name": "grunt-dev",
+      "source": {
+        "source": "github",
+        "repo": "GruntUA/grunt-agent-skills"
+      },
+      "description": "Skill для розробки додатків на Ґрунт (metadata-driven framework). Покриває DocType, controllers, hooks, REST API, grunt.db, Vue 3 frontend, CLI, тестування.",
+      "version": "1.0.0",
+      "author": {
+        "name": "GruntUA"
+      },
+      "homepage": "https://github.com/GruntUA/grunt-agent-skills",
+      "repository": "https://github.com/GruntUA/grunt-agent-skills",
+      "license": "MIT",
+      "keywords": ["grunt", "framework", "python", "fastapi", "vue3", "doctype", "metadata-driven"]
+    }
+  ]
+}
