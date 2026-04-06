@@ -43,6 +43,7 @@ Skill активується, коли задача стосується:
 | Фонові задачі: Celery | [background-tasks.md](./references/background-tasks.md) |
 | Frontend: Vue 3 + grunt-ui | [frontend.md](./references/frontend.md) |
 | CLI команди | [grunt-cli.md](./references/grunt-cli.md) |
+| Логування: structlog, BackgroundTaskLog, ActivityLog | [logging.md](./references/logging.md) |
 | Тестування | [testing.md](./references/testing.md) |
 
 ---
