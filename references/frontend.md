@@ -223,6 +223,7 @@ interface DocField {
 - Строгі TypeScript типи — ніяких `any` без коментаря
 - `defineProps<{...}>()` з явними типами
 - `defineEmits<{...}>()` для всіх подій
+- **Пріоритет DocType**: Нові сторінки та складні UI-компоненти повинні описуватися та налаштовуватися через DocTypes (метадані), а не бути hard-coded.
 
 ❌ **Заборонено:**
 - Options API (`export default { data() {...} }`)
