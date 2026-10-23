@@ -8,7 +8,7 @@
 ## Чеклист
 
 ```
-- [ ] Крок 1: Знайти та підтвердити директорію grunt_apps/
+- [ ] Крок 1: Знайти та підтвердити директорію apps/
 - [ ] Крок 2: Знайти потрібний додаток
 - [ ] Крок 3: Прочитати app.json та поточну структуру
 - [ ] Крок 4: Внести зміни
@@ -17,39 +17,39 @@
 
 ---
 
-## Крок 1: Знайти директорію grunt_apps/
+## Крок 1: Знайти директорію apps/
 
 ```bash
-ls grunt_apps/
+ls apps/
 ```
 
-Якщо воркспейс відкритий всередині додатку (наприклад `grunt_apps/my_crm/`), перейди вище:
+Якщо воркспейс відкритий всередині додатку (наприклад `apps/my_crm/`), перейди вище:
 
 ```bash
-ls ../../grunt_apps/
+ls ../../apps/
 ```
 
 Або пошук за характерними файлами:
 
 ```bash
-ls grunt_apps/ sites/ apps/
+ls apps/ sites/
 ```
 
-**Не створюй новий додаток** (`grunt create-app`), якщо вже є існуючий.
+**Не створюй новий додаток** (`grunt app create`), якщо вже є існуючий.
 
 ---
 
 ## Крок 2: Знайти потрібний додаток
 
 ```bash
-ls grunt_apps/
+ls apps/
 ```
 
 Знайди директорію додатку та ознайомся з її структурою:
 
 ```bash
-ls grunt_apps/<name>/
-ls grunt_apps/<name>/doctypes/
+ls apps/<name>/
+ls apps/<name>/<name>/doctypes/
 ```
 
 ---
@@ -59,30 +59,34 @@ ls grunt_apps/<name>/doctypes/
 Перед будь-якими змінами прочитай ключові файли:
 
 ```bash
-cat grunt_apps/<name>/app.json           # маніфест: назва, версія, scheduled_tasks
-ls grunt_apps/<name>/doctypes/           # наявні DocType (.json + .py)
-cat grunt_apps/<name>/hooks/hooks.py     # наявні хуки
-cat grunt_apps/<name>/tasks/tasks.py     # наявні фонові задачі
+cat apps/<name>/app.json                  # маніфест: name, title, version, modules
+ls apps/<name>/<name>/doctypes/            # наявні DocType (тека на кожен)
+cat apps/<name>/<name>/hooks.py           # наявні хуки
+cat apps/<name>/<name>/tasks.py           # наявні фонові задачі
 ```
 
-Типова структура існуючого додатку:
+Типова структура існуючого додатку (same-name layout):
 
 ```
-grunt_apps/<name>/
-├── app.json                    ← маніфест (назва, label, scheduled_tasks)
-├── __init__.py
-├── doctypes/
-│   ├── Customer.json           ← визначення DocType
-│   ├── Customer.py             ← контролер (якщо є)
-│   ├── Order.json
-│   └── Order.py
-├── tasks/
+apps/<name>/
+├── app.json                        ← маніфест: name, title, version, modules, depends_on
+├── <name>/                         ← Python-пакет застосунку (== name)
 │   ├── __init__.py
-│   └── tasks.py
-└── hooks/
-    ├── __init__.py
-    └── hooks.py
+│   ├── hooks.py                    ← doc_events, scheduler_events, io_exporters, …
+│   ├── routes.py                   ← APIRouter → /api/v1/app/<name> (опц.)
+│   ├── tasks.py                    ← фонові задачі
+│   ├── documents.py               ← override-контролери (опц.)
+│   └── doctypes/
+│       ├── Customer/
+│       │   ├── Customer.json       ← визначення DocType
+│       │   └── customer.py         ← контролер (опц., ім'я файлу — snake_case)
+│       └── Order/
+│           └── Order.json
+├── public/                         ← статика → /assets/<name>  (опц.)
+└── www/                            ← вебсторінки  (опц.)
 ```
+
+Багатомодульний застосунок повторює `<module>/` замість одного `<name>/` для кожного запису в `modules`.
 
 ---
 
@@ -90,7 +94,7 @@ grunt_apps/<name>/
 
 ### Додати нове поле до DocType
 
-1. Відкрий `grunt_apps/<name>/doctypes/<DocType>.json`
+1. Відкрий `apps/<name>/<name>/doctypes/<DocType>/<DocType>.json`
 2. Додай поле до масиву `fields`
 3. **Ніколи не видаляй наявні поля** без міграції — це призведе до втрати даних
 
@@ -109,8 +113,8 @@ grunt_apps/<name>/
 Створи нові файли:
 
 ```bash
-# grunt_apps/<name>/doctypes/NewModel.json
-# grunt_apps/<name>/doctypes/NewModel.py  (опціонально)
+# apps/<name>/<name>/doctypes/NewModel/NewModel.json
+# apps/<name>/<name>/doctypes/NewModel/new_model.py  (опціонально)
 ```
 
 Докладніше → [doctypes.md](./doctypes.md)
@@ -124,12 +128,13 @@ grunt_apps/<name>/
 
 ### Додати хук
 
-Додай функцію до `grunt_apps/<name>/hooks/hooks.py`:
+Додай функцію до `apps/<name>/<module>/hooks.py`:
 
 ```python
-from grunt.core.hooks import on
+from grunt.hooks import on_doc
 
-@on("before_save", doctype="Customer")
+
+@on_doc("Customer", "before_save")
 async def validate_customer_limit(doc, user, **kwargs):
     count = await grunt.count("Customer", filters={"status": "Клієнт"})
     if count >= 1000:

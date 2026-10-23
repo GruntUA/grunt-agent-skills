@@ -44,48 +44,52 @@
 
 ## Перевірка ролей у коді
 
-### grunt.session — поточний користувач
+### grunt.get_user() — поточний користувач
 
 ```python
 # Перевірити наявність хоча б однієї ролі
-grunt.session.has_role("Manager", "Director")  # True або False
+grunt.get_user().has_role("Manager", "Director")  # True або False
 
 # Отримати всі ролі
-roles = grunt.session.roles  # ["Sales", "Manager"]
+roles = grunt.get_user().role_names  # ["Sales", "Manager"]
 
 # Перевірити суперадміна (обходить всі дозволи)
-grunt.session.is_superadmin  # True або False
+grunt.get_user().has_role("System Manager")  # True або False
 
 # Email поточного користувача
-grunt.session.user  # "ivan@company.com"
+grunt.get_user().email  # "ivan@company.com"
 ```
+
+> `grunt.session` у фасаді немає. `grunt.get_user()` ніколи не повертає `None`: без користувача в контексті (гостьовий запит, задача поза `grunt.context`) він кидає 401, а в `grunt.system_context(...)` повертає SYSTEM-користувача з роллю System Manager.
 
 ### Захист у контролері
 
 ```python
-from grunt.core.document.controller import Document
+from grunt.document.base import Document
+
 
 class Invoice(Document):
     async def before_delete(self) -> None:
-        if not grunt.session.has_role("Accountant", "Manager"):
+        if not grunt.get_user().has_role("Accountant", "Manager"):
             grunt.throw(
                 "Тільки бухгалтер або менеджер може видаляти рахунки",
-                title="Недостатньо прав"
+                title="Недостатньо прав",
             )
 
     async def validate(self) -> None:
         # Тільки менеджер може встановити знижку > 20%
         if self.discount and self.discount > 20:
-            if not grunt.session.has_role("Manager"):
+            if not grunt.get_user().has_role("Manager"):
                 grunt.throw("Знижку понад 20% може встановити лише менеджер")
 ```
 
 ### Захист у хуку
 
 ```python
-from grunt.core.hooks import on
+from grunt.hooks import on_doc
 
-@on("before_save", doctype="Settings")
+
+@on_doc("Settings", "before_save")
 async def protect_system_settings(doc, user, **kwargs):
     if not user.is_superadmin and "Manager" not in user.roles:
         grunt.throw("Системні налаштування доступні лише адміністраторам")
@@ -112,7 +116,7 @@ async def protect_system_settings(doc, user, **kwargs):
 # Отримати лише замовлення поточного користувача
 orders = await grunt.get_list(
     "Order",
-    filters={"assigned_to": grunt.session.user},
+    filters={"assigned_to": grunt.get_user().email},
 )
 ```
 
@@ -120,8 +124,8 @@ orders = await grunt.get_list(
 
 ```python
 async def validate(self) -> None:
-    if self.assigned_to != grunt.session.user:
-        if not grunt.session.has_role("Manager"):
+    if self.assigned_to != grunt.get_user().email:
+        if not grunt.get_user().has_role("Manager"):
             grunt.throw("Ви можете редагувати лише власні документи")
 ```
 
@@ -133,10 +137,12 @@ async def validate(self) -> None:
 class Contract(Document):
     async def before_save(self) -> None:
         # Лише юрист може затверджувати контракти
-        if self.status == "Затверджено" and not grunt.session.has_role("Legal", "Manager"):
+        if self.status == "Затверджено" and not grunt.get_user().has_role(
+            "Legal", "Manager"
+        ):
             grunt.throw("Затверджувати контракти може лише юридичний відділ")
 
         # Автоматичне присвоєння власника при створенні
         if not self.owner:
-            self.owner = grunt.session.user
+            self.owner = grunt.get_user().email
 ```

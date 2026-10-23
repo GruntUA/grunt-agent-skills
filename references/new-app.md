@@ -8,7 +8,7 @@
 ## Чеклист
 
 ```
-- [ ] Крок 1: Підтвердити grunt_apps/ директорію
+- [ ] Крок 1: Підтвердити apps/ директорію
 - [ ] Крок 2: Scaffold нового додатку
 - [ ] Крок 3: Визначити DocType
 - [ ] Крок 4: Sync DocType з БД
@@ -18,18 +18,18 @@
 
 ---
 
-## Крок 1: Підтвердити grunt_apps/ директорію
+## Крок 1: Підтвердити apps/ директорію
 
 ```bash
-ls grunt_apps/
+ls apps/
 ```
 
 Якщо команда успішна — ти в правильному місці (корінь grunt-bench або проєкт).
 
-Якщо `grunt_apps/` не існує — перевір, чи є ти в корені Ґрунт-проєкту:
+Якщо `apps/` не існує — перевір, чи є ти в корені Ґрунт-проєкту:
 
 ```bash
-ls grunt_apps/ sites/ apps/
+ls apps/ sites/
 ```
 
 Не запускай нічого додаткового для перевірки.
@@ -39,34 +39,38 @@ ls grunt_apps/ sites/ apps/
 ## Крок 2: Scaffold нового додатку
 
 ```bash
-grunt create-app <name>
+grunt app create <name>
 ```
 
 Приклад:
 
 ```bash
-grunt create-app my_crm
+grunt app create my_crm
 ```
 
-Команда створить структуру в `grunt_apps/my_crm/`:
+Команда інтерактивна (запитає title, автора, email, назву модуля, git) і створить `apps/my_crm/`:
 
 ```
-grunt_apps/my_crm/
+apps/my_crm/
 ├── app.json              ← маніфест додатку
-├── __init__.py
-├── doctypes/             ← JSON визначення DocType + .py контролери
-├── tasks/
-│   ├── __init__.py
-│   └── tasks.py          ← фонові задачі
-└── hooks/
+├── grunt_app.py
+├── install.py
+├── README.md
+├── .gitignore
+└── my_crm/               ← Python-пакет модуля (== назва модуля, типово == name)
     ├── __init__.py
-    └── hooks.py          ← хуки подій
+    ├── hooks.py          ← doc_events, scheduler_events, …
+    ├── tasks.py          ← фонові задачі
+    ├── routes.py         ← APIRouter → /api/v1/app/my_crm
+    ├── doctypes/
+    ├── fixtures/
+    └── templates/
 ```
 
-Перевір:
+Далі:
 
 ```bash
-ls grunt_apps/<name>/
+grunt app install <name>     # реєструє додаток на сайті, вантажить DocTypes/fixtures
 ```
 
 ### Маніфест app.json
@@ -74,10 +78,13 @@ ls grunt_apps/<name>/
 ```json
 {
   "name": "my_crm",
-  "label": "My CRM",
+  "title": "My CRM",
   "version": "0.1.0",
   "description": "Customer Relationship Management",
-  "author": "Your Name"
+  "author": "Your Name",
+  "email": "you@example.com",
+  "modules": ["my_crm"],
+  "depends_on": []
 }
 ```
 
@@ -85,7 +92,7 @@ ls grunt_apps/<name>/
 
 ## Крок 3: Визначити DocType
 
-Створи JSON файл у `grunt_apps/<name>/doctypes/<DocTypeName>.json`.
+Створи теку `apps/<name>/<name>/doctypes/<DocTypeName>/` з файлом `<DocTypeName>.json`.
 
 Мінімальний приклад:
 
@@ -150,8 +157,9 @@ grunt doctype sync Customer
 ### Контролер (поряд із JSON файлом)
 
 ```python
-# grunt_apps/my_crm/doctypes/Customer.py
-from grunt.core.document.controller import Document
+# apps/my_crm/my_crm/doctypes/Customer/customer.py
+from grunt.document.base import Document
+
 
 class Customer(Document):
     async def validate(self) -> None:
@@ -160,7 +168,7 @@ class Customer(Document):
 
     async def after_insert(self) -> None:
         await grunt.notify(
-            users=[grunt.session.user],
+            users=[grunt.get_user().email],
             subject=f"Новий клієнт: {self.full_name}",
             message=f"Клієнт {self.full_name} додано до системи.",
             doctype="Customer",
@@ -173,10 +181,11 @@ class Customer(Document):
 ### Хук (глобальна подія)
 
 ```python
-# grunt_apps/my_crm/hooks/hooks.py
-from grunt.core.hooks import on
+# apps/my_crm/my_crm/hooks.py
+from grunt.hooks import on_doc
 
-@on("after_insert", doctype="Customer")
+
+@on_doc("Customer", "after_insert")
 async def on_customer_insert(doc, user, **kwargs):
     await grunt.publish(
         user=user.email,
@@ -199,7 +208,7 @@ grunt serve
 Або тільки backend:
 
 ```bash
-grunt serve --backend-only
+grunt serve --no-frontend
 ```
 
 Перевір API:

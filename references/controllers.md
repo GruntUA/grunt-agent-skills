@@ -5,20 +5,19 @@
 ## Розміщення та структура
 
 ```
-grunt_apps/<app>/doctypes/<DocTypeName>.py
+apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py
 ```
 
 Файл розміщується **поряд** із JSON файлом DocType.
 
 ```python
-from grunt.core.document.controller import Document
+from grunt.document.base import Document
+
 
 class Customer(Document):
-    async def validate(self) -> None:
-        ...
+    async def validate(self) -> None: ...
 
-    async def after_insert(self) -> None:
-        ...
+    async def after_insert(self) -> None: ...
 ```
 
 **Правила іменування:**
@@ -54,9 +53,9 @@ class Customer(Document):
 
 ```python
 async def validate(self) -> None:
-    print(self.full_name)   # значення поля full_name
-    print(self.status)      # значення поля status
-    print(self.id)          # унікальний ID документа
+    print(self.full_name)  # значення поля full_name
+    print(self.status)  # значення поля status
+    print(self.id)  # унікальний ID документа
 ```
 
 ---
@@ -123,7 +122,7 @@ async def after_insert(self) -> None:
 
     # Миттєве повідомлення поточному користувачу
     await grunt.publish(
-        user=grunt.session.user,
+        user=grunt.get_user().email,
         event="msgprint",
         message="Замовлення успішно створено!",
         type="success",
@@ -163,7 +162,7 @@ async def before_delete(self) -> None:
     if count > 0:
         grunt.throw(
             f"Неможливо видалити клієнта: існує {count} замовлень",
-            title="Помилка видалення"
+            title="Помилка видалення",
         )
 ```
 
@@ -174,12 +173,15 @@ async def before_delete(self) -> None:
 ```python
 async def after_insert(self) -> None:
     # Створити пов'язаний запис
-    log = await grunt.new_doc("ActivityLog", {
-        "doctype_ref": "Customer",
-        "doc_id": self.id,
-        "action": "created",
-        "user": grunt.session.user,
-    })
+    log = await grunt.new_doc(
+        "ActivityLog",
+        {
+            "doctype_ref": "Customer",
+            "doc_id": self.id,
+            "action": "created",
+            "user": grunt.get_user().email,
+        },
+    )
 ```
 
 ---
@@ -189,12 +191,12 @@ async def after_insert(self) -> None:
 ```python
 async def validate(self) -> None:
     # Перевірка ролі
-    if not grunt.session.has_role("Manager", "Admin"):
+    if not grunt.get_user().has_role("Manager", "Admin"):
         grunt.throw("Недостатньо прав для цієї операції")
 
     # Автоматичне присвоєння
     if not self.assigned_to:
-        self.assigned_to = grunt.session.user
+        self.assigned_to = grunt.get_user().email
 ```
 
 ---

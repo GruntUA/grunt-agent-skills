@@ -1,11 +1,11 @@
 # Фонові задачі у Ґрунт
 
-Ґрунт використовує **Celery + Redis** для виконання довгих або відкладених операцій у фоні.
+Ґрунт використовує **TaskIQ** для виконання довгих або відкладених операцій у фоні. Брокер — Redis Stream (якщо задано `REDIS_URL`), інакше in-memory брокер для локальної розробки.
 
 ## Де розміщувати
 
 ```
-grunt_apps/<app>/tasks/tasks.py
+apps/<app>/<module>/tasks.py
 ```
 
 ---
@@ -13,43 +13,46 @@ grunt_apps/<app>/tasks/tasks.py
 ## Базовий синтаксис
 
 ```python
-from grunt.core.tasks.broker import retryable_task
-from grunt.app import grunt
+from grunt.tasks.broker import retryable_task
+import grunt
+
 
 @retryable_task(max_retries=3, delay=60)
 async def my_task(param1: str, param2: int = 0):
     """Опис задачі."""
     # логіка задачі
-    pass
+    ...
 ```
 
 | Параметр `@retryable_task` | Опис |
 |---------------------------|------|
-| `max_retries` | Кількість повторних спроб при помилці |
-| `delay` | Затримка між спробами (секунди) |
+| `max_retries` | Кількість повторних спроб при помилці (типово 3) |
+| `delay` | Затримка між спробами, секунди (типово 60) |
 
 ---
 
 ## Запуск задачі з коду
 
-### Асинхронний запуск (в фоні)
+### Асинхронний запуск (у фоні)
 
 ```python
-# Запустити задачу і одразу повернутись
-await my_task.delay(param1="value", param2=42)
+# Поставити в чергу і одразу повернутись
+await my_task.kiq(param1="value", param2=42)
 ```
 
 ### З контролера
 
 ```python
-from grunt.core.document.controller import Document
+from grunt.document.base import Document
+
 
 class Order(Document):
     async def after_insert(self) -> None:
         # Надіслати підтвердження email у фоні
-        from my_crm.tasks.tasks import send_order_confirmation
-        await send_order_confirmation.delay(
-            order_id=str(self.id),
+        from my_crm.sales.tasks import send_order_confirmation
+
+        await send_order_confirmation.kiq(
+            order_id=self.name,
             customer_email=self.customer_email,
         )
 ```
@@ -57,12 +60,14 @@ class Order(Document):
 ### З хука
 
 ```python
-from grunt.core.hooks import on
+from grunt.hooks import on, on_doc
 
-@on("after_insert", doctype="Lead")
+
+@on_doc("Lead", "after_insert")
 async def on_lead_created(doc, user, **kwargs):
-    from my_crm.tasks.tasks import sync_lead_to_external_crm
-    await sync_lead_to_external_crm.delay(lead_id=str(doc["id"]))
+    from my_crm.crm.tasks import sync_lead_to_external_crm
+
+    await sync_lead_to_external_crm.kiq(lead_id=doc["name"])
 ```
 
 ---
@@ -76,7 +81,6 @@ async def on_lead_created(doc, user, **kwargs):
 async def send_order_confirmation(order_id: str, customer_email: str):
     """Надіслати підтвердження замовлення."""
     order = await grunt.get_doc("Order", order_id)
-    # відправка через email-сервіс
     await send_email(
         to=customer_email,
         subject=f"Замовлення #{order['name']} підтверджено",
@@ -91,7 +95,6 @@ async def send_order_confirmation(order_id: str, customer_email: str):
 async def sync_lead_to_external_crm(lead_id: str):
     """Синхронізувати лід із зовнішньою CRM."""
     lead = await grunt.get_doc("Lead", lead_id)
-    # API запит до зовнішньої системи
     response = await http_client.post(
         "https://external-crm.example.com/api/leads",
         json={"name": lead["full_name"], "email": lead["email"]},
@@ -106,38 +109,37 @@ async def sync_lead_to_external_crm(lead_id: str):
 @retryable_task(max_retries=1, delay=0)
 async def recalculate_customer_stats():
     """Перерахувати статистику для всіх клієнтів."""
-    customers = await grunt.get_list("Customer", filters={}, fields=["id"])
+    customers = await grunt.get_list("Customer", filters={}, fields=["name"])
     for customer in customers:
         orders = await grunt.get_list(
             "Order",
-            filters={"customer": customer["id"], "status": "Завершено"},
+            filters={"customer": customer["name"], "status": "Завершено"},
             fields=["amount"],
         )
         total = sum(o["amount"] for o in orders)
-        await grunt.db.set_value("Customer", customer["id"], "total_orders", total)
+        await grunt.db.set_value("Customer", customer["name"], "total_orders", total)
 ```
 
 ---
 
 ## Розклад (scheduled tasks)
 
-Зареєструй задачу в `app.json` з cron виразом:
+Зареєструй задачі у `hooks.py` застосунку через `scheduler_events` — Ґрунт підхоплює цей словник під час завантаження застосунку:
 
-```json
-{
-  "name": "my_crm",
-  "scheduled_tasks": [
-    {
-      "task": "my_crm.tasks.tasks.recalculate_customer_stats",
-      "cron": "0 2 * * *"
-    },
-    {
-      "task": "my_crm.tasks.tasks.sync_lead_to_external_crm",
-      "cron": "*/30 * * * *"
-    }
-  ]
+```python
+# apps/my_crm/crm/hooks.py
+scheduler_events = {
+    "daily": ["my_crm.crm.tasks.recalculate_customer_stats"],
+    "cron": [
+        {
+            "handler": "my_crm.crm.tasks.sync_lead_to_external_crm",
+            "expression": "*/30 * * * *",
+        },
+    ],
 }
 ```
+
+Ключі-псевдоніми: `all` (щохвилини), `hourly`, `daily`. Для довільного розкладу — `cron` зі списком `{"handler", "expression"}`.
 
 ### Приклади cron виразів
 
@@ -151,26 +153,19 @@ async def recalculate_customer_stats():
 
 ---
 
-## Вимоги для запуску
-
-Фонові задачі потребують запущеного Redis:
+## Запуск воркера
 
 ```bash
-grunt serve  # запускає і Celery worker автоматично
+grunt worker           # запуск воркера TaskIQ
+# еквівалент: taskiq worker grunt.tasks.broker:broker
 ```
 
-Або вручну:
-
-```bash
-grunt serve --backend-only  # FastAPI
-# в іншому терміналі:
-celery -A grunt.core.tasks.broker worker --loglevel=info
-```
+Для Redis-брокера (продакшн) потрібен запущений Redis і змінна `REDIS_URL`. Без неї працює in-memory брокер — задачі виконуються в тому ж процесі, розклад і ретраї не переживають рестарт.
 
 ---
 
 ## Анти-паттерни
 
 - ❌ Не виконуй довгих операцій (> 5 сек) прямо в контролері/хуку — виноси у фонову задачу
-- ❌ Не передавай великі об'єкти в аргументи задачі — передавай лише `id`
-- ❌ Не забувай про `max_retries` — задачі без retry можуть загубитись при збої Redis
+- ❌ Не передавай великі об'єкти в аргументи задачі — передавай лише `name` (id)
+- ❌ Не забувай про `max_retries` — задачі без retry можуть загубитись при збої брокера

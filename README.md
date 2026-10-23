@@ -26,10 +26,10 @@ npx skills add GruntUA/grunt-agent-skills --skill grunt-dev
 - **Hooks**: `@on` декоратор, cross-cutting логіка між DocTypes
 - **REST API + GruntApp SDK**: grunt.get_doc, grunt.new_doc, grunt.get_list, grunt.db.*
 - **Database**: grunt.db helpers, фільтри, bulk операції
-- **Permissions**: RBAC, ролі, grunt.session, row-level security
-- **Background tasks**: Celery + @retryable_task, розклад в app.json
+- **Permissions**: RBAC, ролі, grunt.get_user(), row-level security
+- **Background tasks**: TaskIQ + @retryable_task, розклад через scheduler_events у hooks.py
 - **Frontend**: Vue 3 + grunt-ui, composables (useDocType, useDocument, useList), Pinia
-- **CLI**: grunt serve, db init/migrate, doctype sync, create-app
+- **CLI**: grunt serve, grunt migrate, grunt doctype sync, grunt app create/install
 - **Testing**: pytest (backend), vitest (Vue), Playwright (E2E)
 
 ## Використання
@@ -69,8 +69,8 @@ grunt-agent-skills/
     ├── hooks.md            ← @on декоратор, глобальні хуки
     ├── api.md              ← REST API + GruntApp SDK
     ├── database.md         ← grunt.db.*, фільтри, запити
-    ├── permissions.md      ← RBAC, ролі, grunt.session
-    ├── background-tasks.md ← Celery, @retryable_task, розклад
+    ├── permissions.md      ← RBAC, ролі, grunt.get_user()
+    ├── background-tasks.md ← TaskIQ, @retryable_task, розклад
     ├── frontend.md         ← Vue 3 + grunt-ui + composables
     ├── grunt-cli.md        ← всі CLI команди
     └── testing.md          ← pytest, vitest, Playwright

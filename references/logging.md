@@ -45,9 +45,9 @@ logger.warning("order.limit_exceeded", order_id=str(self.id), amount=self.amount
 logger.error("sync.failed", doctype="Lead", lead_id=str(lead_id), exc_info=True)
 
 # ❌ Неправильно
-logger.info("Customer created!")        # рядок без структури
-logger.info(f"Order {id} failed")       # f-string замість key-value
-print("debug:", value)                  # print заборонено
+logger.info("Customer created!")  # рядок без структури
+logger.info(f"Order {id} failed")  # f-string замість key-value
+print("debug:", value)  # print заборонено
 ```
 
 ---
@@ -56,9 +56,10 @@ print("debug:", value)                  # print заборонено
 
 ```python
 import structlog
-from grunt.core.document.controller import Document
+from grunt.document.base import Document
 
 logger = structlog.get_logger()
+
 
 class Order(Document):
     async def validate(self) -> None:
@@ -71,14 +72,14 @@ class Order(Document):
             order_id=str(self.id),
             customer=self.customer,
             total=float(self.total),
-            user=grunt.session.user,
+            user=grunt.get_user().email,
         )
 
     async def before_delete(self) -> None:
         logger.warning(
             "order.delete_requested",
             order_id=str(self.id),
-            user=grunt.session.user,
+            user=grunt.get_user().email,
         )
 ```
 
@@ -88,16 +89,17 @@ class Order(Document):
 
 ```python
 import structlog
-from grunt.core.hooks import on
+from grunt.hooks import on_doc
 
 logger = structlog.get_logger()
 
-@on("after_insert", doctype="Customer")
+
+@on_doc("Customer", "after_insert")
 async def on_customer_insert(doc, user, **kwargs):
     logger.info(
         "customer.hook_triggered",
         event="after_insert",
-        customer_id=doc["id"],
+        customer_id=doc["name"],
         user=user.email,
     )
 ```
@@ -108,9 +110,10 @@ async def on_customer_insert(doc, user, **kwargs):
 
 ```python
 import structlog
-from grunt.core.tasks.broker import retryable_task
+from grunt.tasks.broker import retryable_task
 
 logger = structlog.get_logger()
+
 
 @retryable_task(max_retries=3, delay=60)
 async def sync_customers():
@@ -134,10 +137,11 @@ async def sync_customers():
 ```python
 import structlog
 from fastapi import APIRouter, Depends
-from grunt.core.auth.dependencies import current_user
+from grunt.auth.dependencies import current_user
 
 logger = structlog.get_logger()
 router = APIRouter()
+
 
 @router.post("/custom-action")
 async def custom_action(user=Depends(current_user)):
@@ -159,7 +163,7 @@ except Exception as e:
         "external_api.request_failed",
         service="payment_gateway",
         error=str(e),
-        exc_info=True,   # ← додає повний traceback
+        exc_info=True,  # ← додає повний traceback
     )
     raise
 ```
@@ -193,13 +197,16 @@ failed_tasks = await grunt.get_list(
 ActivityLog заповнюється автоматично системою. Але якщо потрібно додати власну подію:
 
 ```python
-await grunt.new_doc("ActivityLog", {
-    "doctype": "Customer",
-    "doc_id": str(self.id),
-    "user": grunt.session.user,
-    "action": "Update",
-    "details": {"changed_field": "status", "new_value": self.status},
-})
+await grunt.new_doc(
+    "ActivityLog",
+    {
+        "doctype": "Customer",
+        "doc_id": str(self.id),
+        "user": grunt.get_user().email,
+        "action": "Update",
+        "details": {"changed_field": "status", "new_value": self.status},
+    },
+)
 ```
 
 ---

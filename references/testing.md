@@ -5,46 +5,50 @@
 ### Розміщення
 
 ```
-backend/tests/
-├── conftest.py              ← fixtures та налаштування
+apps/<app>/tests/
+├── conftest.py              ← fixtures (див. нижче)
 ├── test_customer.py         ← тести для Customer DocType
-├── test_order.py
-└── <app>/
-    └── test_<feature>.py    ← тести конкретного додатку
+└── test_<feature>.py
 ```
+
+Тести самого фреймворку живуть в `apps/grunt/tests/`.
 
 ### Запуск
 
 ```bash
-pytest backend/tests/                    # всі тести
-pytest backend/tests/ -v                 # з детальним виводом
-pytest backend/tests/test_customer.py    # конкретний файл
-pytest backend/tests/ -k "test_create"  # фільтр за назвою
-pytest backend/tests/ --tb=short        # коротке трасування помилок
+grunt test                     # тести фреймворку
+grunt test <app>               # тести конкретного додатку
+grunt test <app> --doctype Customer   # тести одного DocType
+# або напряму з теки застосунку:
+cd apps/<app> && pytest -q
+pytest -k "test_create"        # фільтр за назвою
 ```
 
-### Структура тесту
+### conftest.py застосунку
+
+Ґрунт дає готовий набір фікстур (`setup_db`, `db_session`, `engine`, `ctx`, `client`, `auth_headers`) через `grunt.testkit`:
+
+```python
+# apps/<app>/tests/conftest.py
+from pathlib import Path
+from grunt.testkit import make_app_fixtures
+
+globals().update(make_app_fixtures(Path(__file__).parent.parent, "<app>"))
+```
+
+Якщо потрібен власний клієнт — використовуй `ASGITransport` (не застарілий `AsyncClient(app=...)`):
 
 ```python
 import pytest
-from httpx import AsyncClient
+from httpx import ASGITransport, AsyncClient
 from grunt.main import app
-from grunt.core.db.session import get_session
+
 
 @pytest.fixture
 async def client():
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
-
-@pytest.fixture
-async def auth_headers(client):
-    """Отримати JWT токен тестового користувача."""
-    response = await client.post("/api/v1/auth/login", json={
-        "email": "test@example.com",
-        "password": "testpass"
-    })
-    token = response.json()["data"]["access_token"]
-    return {"Authorization": f"Bearer {token}"}
 ```
 
 ### Тест CRUD операцій
@@ -62,6 +66,7 @@ async def test_create_customer(client, auth_headers):
     assert data["success"] is True
     assert data["data"]["full_name"] == "Іван Іванов"
 
+
 @pytest.mark.asyncio
 async def test_list_customers(client, auth_headers):
     response = await client.get(
@@ -72,6 +77,7 @@ async def test_list_customers(client, auth_headers):
     data = response.json()
     assert data["success"] is True
     assert isinstance(data["data"], list)
+
 
 @pytest.mark.asyncio
 async def test_validation_error(client, auth_headers):
@@ -106,6 +112,7 @@ async def test_invalid_email_throws(client, auth_headers):
 # conftest.py
 import pytest
 
+
 @pytest.fixture
 async def sample_customer(client, auth_headers):
     """Створити тестового клієнта та видалити після тесту."""
@@ -118,7 +125,7 @@ async def sample_customer(client, auth_headers):
     yield customer
     # Cleanup
     await client.delete(
-        f"/api/v1/docs/Customer/{customer['id']}",
+        f"/api/v1/docs/Customer/{customer['name']}",
         headers=auth_headers,
     )
 ```

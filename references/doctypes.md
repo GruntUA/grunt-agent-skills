@@ -12,8 +12,8 @@ DocType — це **центральна абстракція Ґрунт**. Ві�
 ## Де розміщувати
 
 ```
-grunt_apps/<app>/doctypes/<DocTypeName>.json   ← обов'язково
-grunt_apps/<app>/doctypes/<DocTypeName>.py     ← опціонально (контролер)
+apps/<app>/<module>/doctypes/<DocTypeName>/<DocTypeName>.json   ← обов'язково
+apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціонально (контролер)
 ```
 
 Назва файлу = назва DocType. Наприклад: `Customer.json`, `SalesOrder.json`.
@@ -54,7 +54,7 @@ grunt_apps/<app>/doctypes/<DocTypeName>.py     ← опціонально (ко�
 |-----------|-----|------|
 | `"Text"` | varchar(255) | Короткий текст |
 | `"LongText"` | text | Довгий текст |
-| `"Int"` | integer | Ціле число |
+| `"Int"` | integer | Ціле число; `"options": "Bytes"` — розмір, показується як `1.4 MB` |
 | `"Float"` | numeric(20,6) | Дробове число |
 | `"Check"` | boolean | Прапорець (true/false) |
 | `"Date"` | date | Дата |
@@ -72,15 +72,15 @@ grunt_apps/<app>/doctypes/<DocTypeName>.py     ← опціонально (ко�
 
 | fieldtype | Опис |
 |-----------|------|
-| `"Attach"` | Посилання на завантажений файл |
+| `"Attach"` | Посилання на завантажений файл (типи понад вбудовані, напр. `.exe`, — у `SystemSettings.extra_file_types`) |
 | `"Image"` | Зображення |
 
 ### Структурні (не в БД — лише для UI)
 
 | fieldtype | Опис |
 |-----------|------|
-| `"Section"` | Розділяє форму на секції |
-| `"Column"` | Колонка (2 або 3 колонки поруч) |
+| `"Section"` | Розділяє форму на секції. Ширина будь-якого поля в колонці — `"columns": 1–12` (6+6, 4+4+4 стають в один рядок) |
+| `"Column"` | Колонка (до 4 поруч; ширина — `columns` у дванадцятих, без неї колонки рівні) |
 | `"Tab"` | Вкладка в формі |
 | `"Table"` | Дочірня таблиця (вкажи `"options": "ChildDocTypeName"`) |
 
@@ -90,11 +90,18 @@ grunt_apps/<app>/doctypes/<DocTypeName>.py     ← опціонально (ко�
 |-----------|------|
 | `"Select"` | Dropdown. Опції через `\n` в `"options"` |
 | `"RichText"` | HTML редактор (Tiptap) |
+| `"HTMLView"` | HTML, сформований сервером (таблиця, звіт) — показується як розмітка, лише перегляд; санітизується при записі |
 | `"JSON"` | JSONB поле |
 | `"Code"` | Code editor |
 | `"Color"` | Color picker |
 | `"Signature"` | Поле підпису |
 | `"Geolocation"` | GPS координати |
+
+---
+
+## Зарезервовані назви полів
+
+Не називай поля `name`, `owner`, `created_at`, `modified_at`, `modified_by`, `docstatus`, `doctype` (системні колонки) і `user`, `data`, `session`, `engine`, `doc_before_save`: це атрибути контролера `Document`, тож `self.user` поверне поточного користувача, а не значення поля. Для «чий це запис» бери `account` або `member`.
 
 ---
 

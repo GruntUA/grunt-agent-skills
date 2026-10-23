@@ -100,30 +100,30 @@ result = await grunt.get_list(
 ### Прості рівні
 
 ```python
-filters={"status": "Active"}                    # = 'Active'
-filters={"status": "Active", "type": "VIP"}    # AND умова
+filters = {"status": "Active"}  # = 'Active'
+filters = {"status": "Active", "type": "VIP"}  # AND умова
 ```
 
 ### Порівняння
 
 ```python
-filters={"amount__gte": "1000"}     # amount >= 1000
-filters={"amount__lte": "5000"}     # amount <= 5000
-filters={"amount__gt": "100"}       # amount > 100
-filters={"amount__lt": "9999"}      # amount < 9999
+filters = {"amount__gte": "1000"}  # amount >= 1000
+filters = {"amount__lte": "5000"}  # amount <= 5000
+filters = {"amount__gt": "100"}  # amount > 100
+filters = {"amount__lt": "9999"}  # amount < 9999
 ```
 
 ### Дати
 
 ```python
-filters={"created_at__gte": "2024-01-01"}   # від початку 2024
-filters={"due_date__lt": "2024-12-31"}      # до кінця 2024
+filters = {"created_at__gte": "2024-01-01"}  # від початку 2024
+filters = {"due_date__lt": "2024-12-31"}  # до кінця 2024
 ```
 
 ### LIKE пошук
 
 ```python
-filters={"full_name__like": "%Іванен%"}     # містить "Іванен"
+filters = {"full_name__like": "%Іванен%"}  # містить "Іванен"
 ```
 
 ---
@@ -136,6 +136,7 @@ filters={"full_name__like": "%Іванен%"}     # містить "Іванен
 # ✅ Правильно — Ґрунт сам робить commit
 async def after_insert(self) -> None:
     await grunt.new_doc("Log", {"message": "Created"})
+
 
 # ❌ Неправильно — ніколи не роби так
 async def after_insert(self) -> None:
@@ -196,13 +197,13 @@ print(f"Закрито {count} замовлень")
 
 ```python
 data = await grunt.db.aggregate(
-   "Order",
-   filters={"status": "Відкрите"},
-   group_by="date(created_at)",
-   aggregations={"amount": "sum", "cnt": "count"},
-   order_by="date(created_at)",
-   order="asc",
-   limit=10,
+    "Order",
+    filters={"status": "Відкрите"},
+    group_by="date(created_at)",
+    aggregations={"amount": "sum", "cnt": "count"},
+    order_by="date(created_at)",
+    order="asc",
+    limit=10,
 )
 # Поверне список словників:
 # [{"date(created_at)": "2024-03-24", "amount": 15000, "cnt": 5}, ...]

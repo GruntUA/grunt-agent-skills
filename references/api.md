@@ -5,7 +5,7 @@
 Основний API для розробників додатків. Доступний у контролерах, хуках та серверних скриптах.
 
 ```python
-from grunt.app import grunt
+import grunt
 ```
 
 ---
@@ -27,11 +27,14 @@ print(invoice["customer"])
 Створити новий документ (запускає всі lifecycle hooks).
 
 ```python
-order = await grunt.new_doc("Order", {
-    "customer": "CUST-001",
-    "status": "Чернетка",
-    "amount": 1500.0,
-})
+order = await grunt.new_doc(
+    "Order",
+    {
+        "customer": "CUST-001",
+        "status": "Чернетка",
+        "amount": 1500.0,
+    },
+)
 print(order["id"])
 ```
 
@@ -90,10 +93,13 @@ total = await grunt.count("Order", filters={"status": "Відкрите"})
 Масове створення без hooks (швидко, для імпорту даних).
 
 ```python
-ids = await grunt.bulk_insert("LogEntry", [
-    {"level": "info", "message": "Запуск"},
-    {"level": "info", "message": "Завершення"},
-])
+ids = await grunt.bulk_insert(
+    "LogEntry",
+    [
+        {"level": "info", "message": "Запуск"},
+        {"level": "info", "message": "Завершення"},
+    ],
+)
 ```
 
 ### grunt.bulk_update(doctype, filters, values)
@@ -132,10 +138,10 @@ await grunt.notify(
 
 ```python
 await grunt.publish(
-    user=grunt.session.user,
+    user=grunt.get_user().email,
     event="msgprint",
     message="Документ успішно збережено",
-    type="success",   # "success" | "error" | "warning" | "info"
+    type="success",  # "success" | "error" | "warning" | "info"
 )
 ```
 
@@ -156,13 +162,13 @@ await grunt.broadcast(
 ## Сесія користувача
 
 ```python
-grunt.session.user          # email поточного користувача
-grunt.session.full_name     # повне ім'я
-grunt.session.roles         # список ролей ["Manager", "Sales"]
-grunt.session.is_superadmin # чи є суперадміном
+grunt.get_user().email  # email поточного користувача
+grunt.get_user().full_name  # повне ім'я
+grunt.get_user().role_names  # список ролей ["Manager", "Sales"]
+grunt.get_user().has_role("System Manager")  # чи є суперадміном
 
 # Перевірка ролей (будь-яка з перелічених)
-grunt.session.has_role("Manager", "Director")  # True або False
+grunt.get_user().has_role("Manager", "Director")  # True або False
 ```
 
 ---
@@ -206,46 +212,53 @@ msg = grunt._("Document saved")
 
 ---
 
-## REST API endpoints
+## REST API endpoints — два санкціоновані транспорти
 
-### DocType (метадані)
-
-```
-GET    /api/v1/meta/doctypes              → список всіх DocType
-POST   /api/v1/meta/doctypes              → створити DocType
-GET    /api/v1/meta/doctypes/{name}       → отримати DocType
-PUT    /api/v1/meta/doctypes/{name}       → оновити DocType
-DELETE /api/v1/meta/doctypes/{name}       → видалити DocType
-POST   /api/v1/meta/doctypes/{name}/sync  → синхронізувати з БД
-```
-
-### Document (дані)
+**1. REST `/api/v1/docs/{doctype}(/{id})`** — ЛИШЕ 5 базових CRUD-операцій, більше нічого:
 
 ```
 GET    /api/v1/docs/{doctype}             → список документів
 POST   /api/v1/docs/{doctype}             → створити документ
 GET    /api/v1/docs/{doctype}/{id}        → отримати документ
 PUT    /api/v1/docs/{doctype}/{id}        → оновити документ
-DELETE /api/v1/docs/{doctype}/{id}        → видалити документ
-POST   /api/v1/docs/{doctype}/{id}/submit → зафіксувати (workflow)
+DELETE /api/v1/docs/{doctype}/{id}        → видалити документ (204, без тіла)
 ```
 
-### Query параметри для GET list
+Працює "з коробки" для будь-якого зареєстрованого DocType — не пиши власний CRUD-роутер.
+
+**2. RPC `/api/v1/method/{dotted.path}`** — усе інше: будь-яка дія, що не є одним із 5 verbs вище (коментарі, bookmark, версії, дерево, workflow-переходи, link-search, bulk-операції, експорт/друк, крос-доктайп пошук, звіти тощо). `dotted.path` — це Python import-path до функції, або `module.Class.method` для staticmethod/classmethod (диспетчер підтримує обидва). Диспетчер підтримує лише GET/POST — колишні PATCH/DELETE-дії стають POST-викликами RPC.
+
+**Ніколи не вигадуй дієслово-екшен у шляху `/docs/{doctype}/щось`** (`bulk-delete`, `tree/move/{id}` тощо) — це завжди RPC whitelisted-метод, не REST-роут.
+
+**Дженерик (крос-доктайп) операції над документом** — не прив'язані до одного конкретного DocType — живуть як `@staticmethod` на базовому контролері `Document` (`grunt/document/mixins/*_rpc.py`, підмішуються в `grunt.document.base.Document`), а не в `grunt/api/`: `grunt.document.base.Document.get_tree`, `.link_search`, `.print` тощо. Операція, специфічна для ОДНОГО DocType (напр. запуск збереженого `Report`) — у контролері ЦЬОГО доктайпу: `grunt.reports.doctypes.Report.report.run`, за тим самим патерном що й `grunt.activity.doctypes.ActivityLog.activity_log.list_activity`.
+
+**Не дублюй контекст класу/модуля в імені методу**, але не йди в іншу крайність — на пласкому класі `Document` голе `get`/`move`/`search` занадто загальне (`get` ще й конфліктує з `Document.get(fieldname)`): `Document.get_tree`/`Document.move_tree_node`, `Document.link_search`, `Document.apply_workflow_transition`. Прибирай слово лише коли нічого не втрачається: `Document.get_versions`/`get_activity_log`/`get_timeline`, `Document.get_comments`/`add_comment`, `Document.get_backlinks`.
+
+### Query параметри для GET list (REST)
 
 ```
 ?page=1&per_page=20
-?sort=name&order=asc
+?sort_by=name&sort_order=asc
 ?filter[status]=active
 ?filter[amount__gte]=1000
 ?fields=id,name,status,customer
 ?search=ключове+слово
 ```
 
+Для RPC-методів еквівалент фільтрів — один kwarg `filters: dict[str, Any] | None` (JSON-об'єкт, а не bracket-style query) — диспетчер сам JSON-парсить значення, що виглядають як об'єкт/масив.
+
+### Конверт відповіді
+
+Завжди через `ok()`/`ok_list()`/`error_body()` (`grunt/api/v1/schemas/response.py`) — `{"success": true, "data": ...}` / `{"success": false, "error": {...}}`. Диспетчер `/api/v1/method/...` сам обгортає результат whitelisted-функції — сама функція повертає сирі дані, без `ok(...)`. Виняток — бінарні/стрімінгові відповіді (export/print): повертаються сирим `Response`/`StreamingResponse`, диспетчер форвардить їх без обгортки.
+
 ### Приклад запиту
 
 ```bash
 curl -H "Authorization: Bearer <token>" \
   "http://localhost:8000/api/v1/docs/Order?filter[status]=Відкрите&per_page=10"
+
+curl -H "Authorization: Bearer <token>" \
+  "http://localhost:8000/api/v1/method/grunt.document.base.Document.get_tree?doctype=Category"
 ```
 
 ---

@@ -16,7 +16,7 @@ Skill активується, коли задача стосується:
 - REST API або GruntApp SDK (`grunt.get_doc`, `grunt.new_doc`...)
 - Роботи з базою даних через `grunt.db`
 - Налаштування дозволів (RBAC, ролі)
-- Фонових задач (Celery, `@retryable_task`)
+- Фонових задач (TaskIQ, `@retryable_task`)
 - Frontend на Vue 3 + grunt-ui
 - CLI команд (`grunt serve`, `grunt db migrate`...)
 - Написання тестів (pytest, vitest)
@@ -45,7 +45,7 @@ Skill активується, коли задача стосується:
 | REST API + GruntApp SDK | [api.md](../../references/api.md) |
 | База даних: `grunt.db.*` | [database.md](../../references/database.md) |
 | Дозволи: RBAC, ролі | [permissions.md](../../references/permissions.md) |
-| Фонові задачі: Celery | [background-tasks.md](../../references/background-tasks.md) |
+| Фонові задачі: TaskIQ | [background-tasks.md](../../references/background-tasks.md) |
 | Frontend: Vue 3 + grunt-ui | [frontend.md](../../references/frontend.md) |
 | CLI команди | [grunt-cli.md](../../references/grunt-cli.md) |
 | Логування: structlog, BackgroundTaskLog, ActivityLog | [logging.md](../../references/logging.md) |
@@ -65,6 +65,15 @@ Skill активується, коли задача стосується:
 - Бізнес-логіку — в сервісному шарі, не в API endpoints напряму
 - **Строго дотримуйся стандарту PEP8** для будь-якого коду на Python.
 - **Використовуй максимально нові версії** всіх пакетів і фреймворків, включно з найсвіжішими стабільними версіями Python та Node.js.
+
+## Імпорти (Python 3.15)
+
+- **Не пиши** `from __future__ import annotations` і не бери анотації в лапки: з 3.14 анотації обчислюються відкладено (PEP 649).
+- **Не пиши** `if TYPE_CHECKING:` і не ховай імпорти в тіло функції заради циклів. Пиши `lazy from grunt.x import Y` нагорі модуля (PEP 810): модуль завантажиться при першому зверненні до імені.
+- `lazy` став лише там, де він щось дає: для модулів `grunt.*`, які можуть утворити цикл, і для важких опційних бібліотек (openpyxl, PIL…). Стандартну бібліотеку й пакети, які й так завантажуються при старті (sqlalchemy, fastapi, pydantic…), імпортуй звичайно.
+- Імпорт опційної залежності в `try/except ImportError` лишається всередині функції: `lazy` не можна ставити в `try`.
+- **Пастка з тестами:** імʼя з `lazy from m import f` привʼязується при першому виклику, тож `monkeypatch.setattr(m, "f", …)` після цього до коду вже не дійде. Якщо функцію підміняють у тестах, імпортуй модуль (`lazy from grunt.storage.cloud import rclone` → `rclone.is_installed()`) або патч імʼя в модулі-споживачі.
+- Не пиши `encoding="utf-8"` в `open()` / `read_text()` / `write_text()`: у 3.15 UTF-8 і так за замовчуванням (PEP 686).
 
 ## Структура відповіді API
 
