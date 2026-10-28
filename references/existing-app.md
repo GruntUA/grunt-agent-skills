@@ -10,7 +10,7 @@
 ```
 - [ ] Крок 1: Знайти та підтвердити директорію apps/
 - [ ] Крок 2: Знайти потрібний додаток
-- [ ] Крок 3: Прочитати app.json та поточну структуру
+- [ ] Крок 3: Прочитати маніфест (pyproject.toml) та поточну структуру
 - [ ] Крок 4: Внести зміни
 - [ ] Крок 5: Sync та перевірити
 ```
@@ -59,7 +59,7 @@ ls apps/<name>/<name>/doctypes/
 Перед будь-якими змінами прочитай ключові файли:
 
 ```bash
-cat apps/<name>/app.json                  # маніфест: name, title, version, modules
+cat apps/<name>/pyproject.toml            # маніфест: [project] + [tool.grunt] (title, depends_on); версія — з git-тегів
 ls apps/<name>/<name>/doctypes/            # наявні DocType (тека на кожен)
 cat apps/<name>/<name>/hooks.py           # наявні хуки
 cat apps/<name>/<name>/tasks.py           # наявні фонові задачі
@@ -69,7 +69,7 @@ cat apps/<name>/<name>/tasks.py           # наявні фонові задач
 
 ```
 apps/<name>/
-├── app.json                        ← маніфест: name, title, version, modules, depends_on
+├── pyproject.toml                  ← маніфест: [project] + [tool.grunt] (title, depends_on, modules)
 ├── <name>/                         ← Python-пакет застосунку (== name)
 │   ├── __init__.py
 │   ├── hooks.py                    ← doc_events, scheduler_events, io_exporters, …
@@ -102,7 +102,7 @@ apps/<name>/
 {
   "fieldname": "phone",
   "label": "Телефон",
-  "fieldtype": "Text"
+  "fieldtype": "Data"
 }
 ```
 

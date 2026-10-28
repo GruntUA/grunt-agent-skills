@@ -52,8 +52,7 @@ grunt app create my_crm
 
 ```
 apps/my_crm/
-├── app.json              ← маніфест додатку
-├── grunt_app.py
+├── pyproject.toml        ← пакет + маніфест додатку ([tool.grunt])
 ├── install.py
 ├── README.md
 ├── .gitignore
@@ -73,20 +72,25 @@ apps/my_crm/
 grunt app install <name>     # реєструє додаток на сайті, вантажить DocTypes/fixtures
 ```
 
-### Маніфест app.json
+### Маніфест — pyproject.toml
 
-```json
-{
-  "name": "my_crm",
-  "title": "My CRM",
-  "version": "0.1.0",
-  "description": "Customer Relationship Management",
-  "author": "Your Name",
-  "email": "you@example.com",
-  "modules": ["my_crm"],
-  "depends_on": []
-}
+Окремого app.json немає. Назва, опис, автори — стандартний `[project]`; решта — `[tool.grunt]` (його наявність і робить теку додатком):
+
+```toml
+[project]
+name = "my_crm"
+dynamic = ["version"]
+description = "Customer Relationship Management"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+
+[tool.grunt]
+title = "My CRM"
+depends_on = []                 # назви або { name = "cms", url = "https://..." }
+# required_grunt = ">=0.5"
+# modules = ["my_crm"]          # типово [<назва теки>]
 ```
+
+Читати в коді — `grunt.apps.manifest.read_manifest(app_dir)` / `is_app(app_dir)`. Версії в маніфесті немає — вона з git-тегів `vX.Y.Z` (`grunt release --app <name>`), без тегів `0.1.devN+g<hash>`. Іконка (Lucide-назва) і колір — у записі AppMenu в `fixtures/00_workspace.json`; без `color` колір підбирається з палітри за назвою.
 
 ---
 
@@ -106,14 +110,14 @@ grunt app install <name>     # реєструє додаток на сайті, 
     {
       "fieldname": "full_name",
       "label": "Повне ім'я",
-      "fieldtype": "Text",
+      "fieldtype": "Data",
       "required": true,
       "in_list_view": true
     },
     {
       "fieldname": "email",
       "label": "Email",
-      "fieldtype": "Text",
+      "fieldtype": "Data",
       "in_list_view": true
     },
     {

@@ -52,7 +52,7 @@ apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціона�
 
 | fieldtype | БД | Опис |
 |-----------|-----|------|
-| `"Text"` | varchar(255) | Короткий текст |
+| `"Data"` | varchar(255) | Короткий текст, 1 рядок (`options` — автопідказки) |
 | `"LongText"` | text | Довгий текст |
 | `"Int"` | integer | Ціле число; `"options": "Bytes"` — розмір, показується як `1.4 MB` |
 | `"Float"` | numeric(20,6) | Дробове число |
@@ -72,7 +72,7 @@ apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціона�
 
 | fieldtype | Опис |
 |-----------|------|
-| `"Attach"` | Посилання на завантажений файл (типи понад вбудовані, напр. `.exe`, — у `SystemSettings.extra_file_types`) |
+| `"Attach"` | Посилання на завантажений файл (типи понад вбудовані, напр. `.exe`, — у `SystemSettings.allowed_file_types`) |
 | `"Image"` | Зображення |
 
 ### Структурні (не в БД — лише для UI)
@@ -163,7 +163,7 @@ apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціона�
   "module": "my_crm",
   "is_child": true,
   "fields": [
-    {"fieldname": "product", "label": "Товар", "fieldtype": "Text", "required": true},
+    {"fieldname": "product", "label": "Товар", "fieldtype": "Data", "required": true},
     {"fieldname": "qty", "label": "Кількість", "fieldtype": "Int", "required": true},
     {"fieldname": "price", "label": "Ціна", "fieldtype": "Float"}
   ]
@@ -180,6 +180,29 @@ apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціона�
   "options": "OrderItem"
 }
 ```
+
+---
+
+## Статуси: кольори та іконки
+
+Select-поле статусу показується кольоровим бейджем з іконкою (список, шапка форми, канбан):
+
+```json
+"status_field": "status",
+"status_indicators": [
+  {"value": "Чернетка",     "color": "secondary", "icon": "pencil-line"},
+  {"value": "На розгляді",  "color": "info",      "icon": "loader"},
+  {"value": "Затверджено",  "color": "success",   "icon": "circle-check"},
+  {"value": "Призупинено",  "color": "warn",      "icon": "circle-pause"},
+  {"value": "Скасовано",    "color": "danger",    "icon": "circle-x"}
+]
+```
+
+- `status_field` — fieldname Select-поля (не обов'язково `status`); `value` — точне значення опції.
+- `color`: `secondary` (сірий), `info` (синій), `success` (зелений), `warn` (жовтий),
+  `danger` (червоний), `contrast`; значення без індикатора — сірі.
+- `icon` — Lucide (lowercase, дефіс); `label` — інший підпис замість значення.
+- Бейдж малюється для Select-поля; для «Активний/Неактивний» з бейджем — Select, не Check.
 
 ---
 
