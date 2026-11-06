@@ -43,6 +43,23 @@ apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціона�
 | `module` | string | Назва додатку |
 | `title_field` | string | Поле, що використовується як заголовок документа |
 | `is_child` | bool | `true` для Child DocType (використовується в TABLE полях) |
+| `search_fields` | list[str] | Поля для пошуку в списку й Link-полі (окрім `name` і `title_field`, які шукаються завжди) |
+| `in_global_search` | bool | `false` — документи не потрапляють у глобальний пошук (Ctrl+K). Default `true` |
+
+---
+
+## Пошук
+
+Усі поля пошуку (список, Link-dropdown, дерево, віртуальні DocType, глобальний пошук) мають однакову семантику (`grunt/search/terms.py`):
+
+- запит ділиться на слова; рядок підходить, коли **кожне** слово знайдено в **якомусь** полі, в будь-якому порядку («Іван Петренко» знайде запис з іменем і прізвищем у різних полях);
+- регістр не важливий (кирилиця теж), `%` і `_` шукаються буквально;
+- список і Link шукають підрядок у `name`, `title_field` і `search_fields` (Link-поля в `search_fields` — за назвою пов'язаного документа);
+- глобальний пошук — повнотекстовий індекс `grunt_search_index` (SQLite FTS5 / PostgreSQL tsvector / MySQL FULLTEXT): слово шукається як **початок** слова («петр» → «Петренко»), результати ранжуються, збіг у назві вище. Індексуються поля, чий тип `searchable`; показуються лише документи, які користувач може відкрити (з урахуванням row-level прав).
+
+Коли ставити `"in_global_search": false`: службові записи (зв'язки, версії, підписки), телеметрія, великі довідники (КАТОТТГ) — вони засмічують видачу Ctrl+K. Пошук у списку й Link-полі для них працює як і раніше. Записи вже вимкнених DocType прибирає `grunt doctype sync` / `grunt migrate`; `is_log`, `is_child`, `is_virtual` не індексуються взагалі.
+
+Свій пошук у віртуальному DocType — через `apply_search(rows, search, fields)` з `grunt.document.in_memory`, у SQL — `match_columns(search, columns, dialect)` з `grunt.search.terms`, а не `col.ilike(f"%{search}%")`.
 
 ---
 

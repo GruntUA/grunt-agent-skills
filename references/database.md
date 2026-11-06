@@ -89,7 +89,7 @@ result = await grunt.get_list(
     page=1,
     order_by="created_at",
     order="desc",
-    search="Іван",  # full-text пошук
+    search="Іван Петренко",  # кожне слово — в name/title_field/search_fields (див. doctypes.md → Пошук)
 )
 ```
 
