@@ -59,7 +59,7 @@ apps/<app>/<module>/doctypes/<DocTypeName>/<doctypename>.py  ← опціона�
 
 Коли ставити `"in_global_search": false`: службові записи (зв'язки, версії, підписки), телеметрія, великі довідники (КАТОТТГ) — вони засмічують видачу Ctrl+K. Пошук у списку й Link-полі для них працює як і раніше. Записи вже вимкнених DocType прибирає `grunt doctype sync` / `grunt migrate`; `is_log`, `is_child`, `is_virtual` не індексуються взагалі.
 
-Свій пошук у віртуальному DocType — через `apply_search(rows, search, fields)` з `grunt.document.in_memory`, у SQL — `match_columns(search, columns, dialect)` з `grunt.search.terms`, а не `col.ilike(f"%{search}%")`.
+Пошук у віртуальному DocType робить сам `VirtualStore` (`search_fields` сховища), у SQL — `match_columns(search, columns, dialect)` з `grunt.search.terms`, а не `col.ilike(f"%{search}%")`.
 
 ---
 
