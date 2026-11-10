@@ -65,7 +65,7 @@ doc_events = {
 | Параметр | Тип | Опис |
 |----------|-----|------|
 | `doc` | dict | Дані документа (поля як ключі; первинний ключ — `doc["name"]`) |
-| `user` | User | Поточний користувач (об'єкт з `.email`, `.roles`) |
+| `user` | str | Email поточного користувача. Ролі — `await has_roles([...])` (`grunt.permissions.roles`), документ `User` — `grunt.get_user()` |
 | `doctype` | str | Ім'я DocType (передається завжди; у сигнатурі `@on` — позиційно) |
 | `event` | str | Ім'я події |
 | `session` | AsyncSession | Активна сесія БД поточної транзакції |
@@ -102,7 +102,7 @@ import grunt
 @on_doc("Customer", "after_insert")
 async def on_customer_created(doc, user, **kwargs):
     await grunt.publish(
-        user=user.email,
+        user=user,
         event="msgprint",
         message=f"Ласкаво просимо, {doc['full_name']}!",
         type="success",
@@ -137,7 +137,7 @@ async def log_invoice_change(doc, user, **kwargs):
             "doctype_ref": "Invoice",
             "doc_id": doc["name"],
             "action": "updated",
-            "user": user.email,
+            "user": user,
         },
     )
 ```
@@ -166,7 +166,7 @@ async def notify_on_delete(doctype, doc, user, **kwargs):
     await grunt.notify(
         users=["admin@company.com"],
         subject="Документ видалено",
-        message=f"{doctype} {doc.get('name')} видалив {user.email}.",
+        message=f"{doctype} {doc.get('name')} видалив {user}.",
     )
 ```
 
