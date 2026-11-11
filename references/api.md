@@ -230,9 +230,9 @@ DELETE /api/v1/docs/{doctype}/{id}        → видалити документ 
 
 **Ніколи не вигадуй дієслово-екшен у шляху `/docs/{doctype}/щось`** (`bulk-delete`, `tree/move/{id}` тощо) — це завжди RPC whitelisted-метод, не REST-роут.
 
-**Дженерик (крос-доктайп) операції над документом** — не прив'язані до одного конкретного DocType — живуть як `@staticmethod` на базовому контролері `Document` (`grunt/document/mixins/*_rpc.py`, підмішуються в `grunt.document.base.Document`), а не в `grunt/api/`: `grunt.document.base.Document.get_tree`, `.link_search`, `.print` тощо. Операція, специфічна для ОДНОГО DocType (напр. запуск збереженого `Report`) — у контролері ЦЬОГО доктайпу: `grunt.reports.doctypes.Report.report.run`, за тим самим патерном що й `grunt.activity.doctypes.ActivityLog.activity_log.list_activity`.
+**Дженерик (крос-доктайп) операції над документом** — не прив'язані до одного конкретного DocType — whitelisted-функції в `grunt.api.v1.document` (модуль на ділянку: `tree`, `links`, `export`, `history`, `collaboration`, `workflow`, `meta`): `grunt.api.v1.document.tree.get_tree`, `grunt.api.v1.document.links.link_search`, `grunt.api.v1.document.export.print` тощо. Клас `Document` HTTP-методів не має — шар документа не імпортує сервісів, якими ці операції користуються. Операція, специфічна для ОДНОГО DocType (напр. запуск збереженого `Report`) — у контролері ЦЬОГО доктайпу: `grunt.reports.doctypes.Report.report.run`, за тим самим патерном що й `grunt.activity.doctypes.ActivityLog.activity_log.list_activity`.
 
-**Не дублюй контекст класу/модуля в імені методу**, але не йди в іншу крайність — на пласкому класі `Document` голе `get`/`move`/`search` занадто загальне (`get` ще й конфліктує з `Document.get(fieldname)`): `Document.get_tree`/`Document.move_tree_node`, `Document.link_search`, `Document.apply_workflow_transition`. Прибирай слово лише коли нічого не втрачається: `Document.get_versions`/`get_activity_log`/`get_timeline`, `Document.get_comments`/`add_comment`, `Document.get_backlinks`.
+**Не дублюй контекст модуля в імені функції**, але не йди в іншу крайність — голе `get`/`move`/`search` занадто загальне: `tree.get_tree`/`tree.move_tree_node`, `links.link_search`, `workflow.apply_workflow_transition`. Прибирай слово лише коли нічого не втрачається: `history.get_versions`/`get_activity_log`/`get_timeline`, `collaboration.get_comments`/`add_comment`, `meta.get_backlinks`.
 
 ### Query параметри для GET list (REST)
 
@@ -258,7 +258,7 @@ curl -H "Authorization: Bearer <token>" \
   "http://localhost:8000/api/v1/docs/Order?filter[status]=Відкрите&per_page=10"
 
 curl -H "Authorization: Bearer <token>" \
-  "http://localhost:8000/api/v1/method/grunt.document.base.Document.get_tree?doctype=Category"
+  "http://localhost:8000/api/v1/method/grunt.api.v1.document.tree.get_tree?doctype=Category"
 ```
 
 ---
