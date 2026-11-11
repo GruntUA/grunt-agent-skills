@@ -4,36 +4,53 @@
 
 ## Permissions у DocType JSON
 
-Визначаються в масиві `permissions` у JSON файлі DocType:
+Визначаються в масиві `permissions` у JSON файлі DocType. Кожен рядок — роль і **список дій**
+`actions`:
 
 ```json
 "permissions": [
-  {
-    "role": "Sales",
-    "read": true,
-    "write": true,
-    "create": true,
-    "delete": false
-  },
-  {
-    "role": "Manager",
-    "read": true,
-    "write": true,
-    "create": true,
-    "delete": true
-  },
-  {
-    "role": "Viewer",
-    "read": true,
-    "write": false,
-    "create": false,
-    "delete": false
-  }
+  {"role": "Sales", "actions": ["read", "write", "create", "print", "share"], "match": "owner == user"},
+  {"role": "Manager", "actions": ["read", "write", "create", "delete", "export", "print", "share", "report"]},
+  {"role": "Viewer", "actions": ["read", "print"], "hidden_fields": ["salary"]},
+  {"role": "System Manager", "actions": ["read", "write", "create", "delete", "export", "import", "print", "share", "report"]}
 ]
 ```
 
 | Поле | Опис |
 |------|------|
+| `role` | Назва ролі (має існувати в системі) |
+| `actions` | Дозволені дії — список з переліку нижче |
+| `match` | Row-level фільтр: `<field> == user`, `<field> != 'значення'`, `<link_field>.<field> == user` (`user` — email поточного користувача) |
+| `hidden_fields` | Поля, приховані від ролі: не читаються, не пишуться, не фільтруються/сортуються/шукаються |
+| `readonly_fields` | Поля, які роль бачить, але не може змінити в наявному документі (новий документ значення приймає). Діє лише в рядках з `write` |
+
+**Дії** (`actions`):
+
+| Дія | Що дає |
+|-----|--------|
+| `read` | Читання документів (включає `select`) |
+| `select` | Лише вибір у Link-полях (name, title, поля пошуку) |
+| `write` | Редагування |
+| `create` | Створення |
+| `delete` | Видалення |
+| `export` | Експорт у файл/CSV, DataExport |
+| `import` | DataImport, шаблон імпорту |
+| `print` | Друк і попередній перегляд |
+| `share` | Поділитися документом (SharedWith, посилання) |
+| `report` | Звіти, що мають `ref_doctype` на цей DocType; «Створити звіт» у списку |
+
+Правила формату:
+
+- **Старі булеві ключі** (`"read": true`, `"write": 1`, …) — помилка валідації: DocType з ними не
+  завантажиться («list them as actions»). Завжди лише `actions`.
+- Невідома дія, невідомий `match` або назва поля в `hidden_fields`/`readonly_fields`, якої немає
+  в DocType, — теж помилка (одруківка не повинна мовчки відмовляти чи відкривати поле).
+- `export`, `import`, `print`, `share`, `report` **не випливають** з `read`/`write` — видавай їх
+  явно. Типова схема: `print` — кожній ролі з `read`; `export` — разом з `report`; `share` — з
+  `write`; `import` — лише адміністративним ролям.
+- Кілька рядків однієї ролі / кількох ролей користувача поєднуються через OR.
+
+------|------|
 | `role` | Назва ролі (має існувати в системі) |
 | `read` | Читання документів |
 | `write` | Редагування документів |
@@ -49,6 +66,10 @@
 ```python
 # Перевірити наявність хоча б однієї ролі
 grunt.get_user().has_role("Manager", "Director")  # True або False
+
+# Перевірити дію над DocType / документом (та сама перевірка, що й у REST)
+await grunt.has_permission("Invoice", "export")
+await grunt.has_permission("Invoice", "write", doc_id="INV-0001")
 
 # Отримати всі ролі
 roles = grunt.get_user().role_names  # ["Sales", "Manager"]

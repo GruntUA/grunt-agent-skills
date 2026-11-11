@@ -227,12 +227,13 @@ Select-поле статусу показується кольоровим бе�
 
 ```json
 "permissions": [
-  {"role": "Sales", "read": true, "write": true, "create": true, "delete": false},
-  {"role": "Manager", "read": true, "write": true, "create": true, "delete": true}
+  {"role": "Sales", "actions": ["read", "write", "create", "print", "share"]},
+  {"role": "Manager", "actions": ["read", "write", "create", "delete", "export", "print", "share", "report"]}
 ]
 ```
 
-Докладніше → [permissions.md](./permissions.md)
+Старі булеві ключі (`"read": true`) — помилка валідації. Дії, `match`, `hidden_fields`,
+`readonly_fields` → [permissions.md](./permissions.md)
 
 ---
 

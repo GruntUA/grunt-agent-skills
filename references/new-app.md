@@ -129,7 +129,7 @@ depends_on = []                 # назви або { name = "cms", url = "https
     }
   ],
   "permissions": [
-    {"role": "Sales", "read": true, "write": true, "create": true}
+    {"role": "Sales", "actions": ["read", "write", "create", "print", "share"]}
   ]
 }
 ```
