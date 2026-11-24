@@ -134,12 +134,14 @@ DEBUG=true
 ## Оновлення коду та залежностей
 
 ```bash
-grunt update                   # оновити код (git pull), пакети в межах lock-файлів, міграції
-grunt upgrade                  # оновити всі залежності (uv, mise, python, node, rclone, пакети) до найновіших версій та оновити файли версій (package.json, pyproject.toml, mise.toml)
-grunt upgrade --dry-run        # перегляд доступних оновлень без внесення змін
-grunt upgrade runtimes         # тільки системні рантайми (mise, uv, node, python, rclone)
-grunt upgrade packages         # тільки пакети Python та Node.js
+grunt update                   # оновити код (git pull), рантайми в межах mise.toml, пакети рівно за lock-файлами, міграції
 ```
+
+Версії самі по собі `grunt update` не міняє. Новіші пакети (і мажорні теж), мажорна версія Node.js
+у `mise.toml` і компоненти shadcn-vue приходять щотижневим PR `build(deps): update dependencies`
+від `.github/workflows/deps.yml` кожного репозиторію (додатки викликають workflow ядра). Після
+його злиття — `grunt update`. Окремої команди для оновлення версій (колишні `grunt upgrade`,
+`grunt release --deps`, `grunt ui update`) немає.
 
 ---
 
