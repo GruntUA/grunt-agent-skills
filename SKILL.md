@@ -69,6 +69,7 @@ Skill активується, коли задача стосується:
 - **Ніколи** не пиши міграції вручну — вони генеруються автоматично через sync
 - **Завжди** async/await — Ґрунт є async-first (FastAPI + SQLAlchemy 2.0)
 - **Завжди** type hints в Python і TypeScript
+- **Читай класом, коли DocType відомий у коді**: `await Order.get_doc(n)`, `Order.get_list(...)`, `grunt.db.get_all(Order, ...)` — типізовані рядки; назва-рядок (`grunt.get_doc("Order", n)`) — лише для DocType з рантайму (api/v1, MCP, звіти). Наявний код переводить `grunt codemod typed-rows` ([api.md](references/api.md))
 - Логуй через `structlog`
 - Секрети — тільки через `config.py` + env змінні
 - Бізнес-логіку — в сервісному шарі або методах DocType (контролера)

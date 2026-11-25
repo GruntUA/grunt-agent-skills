@@ -24,6 +24,29 @@ class Customer(Document):
 - Назва класу = назва DocType (PascalCase, без пробілів)
 - Наприклад: DocType `"Sales Order"` → клас `SalesOrder`
 
+## Типізовані поля й конструктор
+
+`grunt doctype sync-types <Name> --app <app>` пише в клас блок анотацій полів. `Document` — `dataclass_transform`, тож ці анотації типізують і конструктор (як у dataclass), без жодного дублювання:
+
+```python
+class Customer(Document):
+    # begin: auto-generated types
+    full_name: str                 # обов'язкове при створенні (required, без default)
+    email: str | None = None       # необов'язкове
+    contacts: list[CustomerContact] = []  # Table: дочірні рядки — документи дочірнього контролера
+    # end: auto-generated types
+
+c = Customer(full_name="Іван", email="i@x.ua")   # не збережено → await c.insert()
+c = await Customer.create(full_name="Іван")      # збережено, перевіряє право create
+doc = await Customer.get_doc(name)                # читання як Customer (find_doc, get_list — так само)
+row_doc = Customer(**row)                         # готовий рядок (dict[str, Any])
+```
+
+- `= None` / `= []` — лише для pyright: `__init_subclass__` прибирає їх з класу, поле читається з `self.data`.
+- Не писати `Customer(doctype="Customer", data=...)` чи `Customer("Customer", {...})` — pyright позначить; готовий рядок — `Customer(**row)`. Позиційний словник `Customer({...})` pyright не прийме (типізація неможлива без дублювання полів). `**{літерал}` pyright звіряє за типом значень — краще іменовані аргументи.
+- Не дублювати анотації полів руками поза блоком (pyright: redeclaration).
+- Атрибути класу з `_` (`_prev: dict | None = None`) — звичайні атрибути, їх не чіпає.
+
 ---
 
 ## Lifecycle hooks (порядок виклику)
