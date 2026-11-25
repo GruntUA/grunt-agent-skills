@@ -12,14 +12,34 @@ import grunt
 
 ## Document CRUD
 
+> **Клас — для відомого DocType, назва — для рантайму.** DocType, відомий у коді, читаємо
+> класом контролера — рядки типізовані, IDE і pyright знають поля:
+>
+> ```python
+> inv = await Invoice.get_doc("INV-0001")          # право read, приховані поля, 404
+> inv = await Invoice.find_doc(name)               # None замість 404
+> rows = await Invoice.get_list(filters={"status": "Open"}, fields=["name", "amount"])
+> rows = await grunt.db.get_all(Invoice, fields=["name", "amount"])   # без прав і хуків
+> ```
+>
+> Рядок списку тримає лише поля з `fields=` і без дочірніх таблиць: інше поле → `AttributeError`,
+> зберегти такий рядок не можна (для цього — `get_doc`). Дочірні таблиці документа — список
+> дочірніх контролерів (`inv.items[0].qty`), коли блок типів каже `list[InvoiceItem]`.
+> Фасад за назвою (`grunt.get_doc("Invoice", …)`, `grunt.get_list(…)`) — для DocType, відомого
+> лише в рантаймі (api/v1, MCP, звіти), і для форми API (`__label`, ISO-дати, завжди `name`).
+> Він повертає `AttrDict` (`dict` з атрибутним доступом: `doc.amount`; відсутній ключ →
+> `AttributeError`; поле з назвою методу `dict` — `items`, `values`, `keys`, `get`… —
+> читаємо як `doc["items"]`). Наявний код переводить на класи `grunt codemod typed-rows`
+> (`--dry-run`, `--keep-errors` — лишити файл переписаним і довести помилки pyright руками).
+
 ### grunt.get_doc(doctype, id_or_name)
 
 Отримати один документ за ID або name.
 
 ```python
 invoice = await grunt.get_doc("Invoice", "INV-0001")
-print(invoice["amount"])
-print(invoice["customer"])
+print(invoice.amount)
+print(invoice.customer)
 ```
 
 ### grunt.new_doc(doctype, data)
@@ -35,7 +55,7 @@ order = await grunt.new_doc(
         "amount": 1500.0,
     },
 )
-print(order["id"])
+print(order.name)
 ```
 
 ### grunt.save_doc(doctype, id_or_name, data)
@@ -250,6 +270,10 @@ DELETE /api/v1/docs/{doctype}/{id}        → видалити документ 
 ### Конверт відповіді
 
 Завжди через `ok()`/`ok_list()`/`error_body()` (`grunt/api/v1/schemas/response.py`) — `{"success": true, "data": ...}` / `{"success": false, "error": {...}}`. Диспетчер `/api/v1/method/...` сам обгортає результат whitelisted-функції — сама функція повертає сирі дані, без `ok(...)`. Виняток — бінарні/стрімінгові відповіді (export/print): повертаються сирим `Response`/`StreamingResponse`, диспетчер форвардить їх без обгортки.
+
+**Типи для `grunt.call`.** `grunt app types` генерує з whitelisted-методів (шлях, параметри, анотація повернення) `methods.generated.d.ts` — інтерфейс `GruntMethods`: у клієнтських скриптах автодоповнення імені, перевірка аргументів, тип результату. Ядро: `frontend/src/core/scripting/methods.generated.d.ts` (тест `tests/test_typegen.py` падає, якщо застарів), додаток: `<app>/<module>/methods.generated.d.ts`. Точність = точність анотації: повертай `TypedDict`/dataclass/pydantic замість `dict[str, Any]`, щоб результат мав поля.
+
+**Контролер у відповіді.** Whitelisted-метод може повернути контролер (`-> Employee`, також усередині dict/list) — диспетчер віддає `doc.as_dict()` (поля DocType + `doctype`, `name`, `owner`, `created_at`, `modified_at`, `modified_by`), а `grunt app types` будує TS-інтерфейс з анотацій `sync-types`. Приховані правами поля `get_doc` уже вирізав; контролер з `system_context` піде як є — відповідальність методу. Параметр з типом контролера (`user: User | None = None`) — лише для Python-викликів: через HTTP диспетчер відповідає 422, у типах його нема.
 
 ### Приклад запиту
 

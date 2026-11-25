@@ -33,6 +33,7 @@ grunt app uninstall <name>     # видалити додаток із сайту
 grunt app remove <name>        # прибрати додаток з bench: pip-пакет + apps/<name> → archive/apps/ (спершу uninstall на сайтах)
 grunt app list                 # список встановлених додатків
 grunt app doctor [name]        # перевірити/виправити структуру додатків
+grunt app types [name] [--check]  # типізований grunt.call: methods.generated.d.ts з @grunt.whitelist (після зміни сигнатури методу)
 ```
 
 ---

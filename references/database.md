@@ -57,7 +57,7 @@ else:
 
 ### grunt.db.get_all(doctype, *, filters, fields, limit, order_by, order)
 
-Отримати список документів як список словників (нижчий рівень, ніж `grunt.get_list`).
+Отримати список документів як `AttrDict`-рядки (нижчий рівень, ніж `grunt.get_list`): `row.full_name`, а не `row["full_name"]`.
 
 ```python
 customers = await grunt.db.get_all(
@@ -68,6 +68,8 @@ customers = await grunt.db.get_all(
     order_by="created_at",
     order="desc",
 )
+for c in customers:
+    print(c.full_name, c.email)
 ```
 
 ---
